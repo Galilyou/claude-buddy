@@ -177,14 +177,10 @@ if [ -n "$REASON" ] && [ -n "$REACTION" ]; then
     mkdir -p "$STATE_DIR"
     date +%s > "$COOLDOWN_FILE"
 
-    # Write reaction for status line (use jq for safe JSON encoding)
+    # Write session-scoped reaction file (use jq for safe JSON encoding)
     jq -n --arg r "$REACTION" --arg ts "$(date +%s)000" --arg reason "$REASON" \
       '{reaction: $r, timestamp: ($ts | tonumber), reason: $reason}' \
       > "$REACTION_FILE"
-
-    # Update status.json with reaction
-    TMP=$(mktemp)
-    jq --arg r "$REACTION" '.reaction = $r' "$STATUS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$STATUS_FILE"
 
     # Increment achievement event counter
     if command -v jq >/dev/null 2>&1; then

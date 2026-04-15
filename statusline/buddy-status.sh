@@ -32,7 +32,8 @@ NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 SPECIES=$(jq -r '.species // ""' "$STATE" 2>/dev/null)
 HAT=$(jq -r '.hat // "none"' "$STATE" 2>/dev/null)
 RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
-REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
+# Reaction is read from the session-scoped file below, not from status.json,
+# so that each tmux pane shows its own conversation-relevant reaction.
 ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 # eye is written to status.json by writeStatusState (v2+); fall back to "°"
 E=$(jq -r '.eye // "°"' "$STATE" 2>/dev/null)
@@ -241,11 +242,17 @@ if [ -f "$CONFIG_FILE" ]; then
     _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
 fi
+# Read reaction from the session-scoped file so each tmux pane gets its own
+# conversation-relevant message instead of the last-writer-wins global value.
+REACTION=""
+if [ -f "$REACTION_FILE" ]; then
+    REACTION=$(jq -r '.reaction // ""' "$REACTION_FILE" 2>/dev/null)
+fi
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
     if [ "$REACTION_TTL" -eq 0 ]; then
         FRESH=1
-    elif [ -f "$REACTION_FILE" ]; then
+    else
         TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
         if [ "$TS" != "0" ]; then
             NOW=$(date +%s)
